@@ -4,14 +4,22 @@
 #include <queue>
 #include <list>
 
+
+struct Node;
+typedef std::shared_ptr<Node> NodePtr;
+
 struct Node {
-    Node(int n) : num(n) {}
-    std::shared_ptr<Node> left, right, parent;
+    Node(int n, NodePtr p = nullptr, NodePtr l = nullptr, NodePtr r = nullptr)
+            : num(n), parent(p), left(l), right(r) {}
+    NodePtr left, right, parent;
     int num;
-    void print() { std::cout << num << std::endl;}
+    void print() { std::cout << num << "\t";}
 };
 
-typedef std::shared_ptr<Node> NodePtr;
+NodePtr create_node(int n, NodePtr p = nullptr, NodePtr l = nullptr, NodePtr r = nullptr)
+{
+    return std::make_shared<Node>(Node(n,p,l,r));
+}
 
 NodePtr createBST(std::vector<int> &v, int start, int end, NodePtr parent) {
     if(start > end)
@@ -166,15 +174,8 @@ NodePtr find_equal(NodePtr node, int i) {
     return nullptr;
 }
 
-int main() {
-    std::vector<int> tree;
-    for(int i = 0; i < 31; i++)
-        tree.push_back(i);
-
-    NodePtr root = createBST(tree,0,tree.size()-1,nullptr);
-    std::cout << "PREORDER\n";
-    preorder(root);
-
+void test1(NodePtr root)
+{
     std::cout << "SEARCH TREE: " << (check(root) ? "YES" : "NO") << std::endl;
 
     std::vector<NodePtr> cases(6);
@@ -225,5 +226,90 @@ int main() {
             std::cout << std::endl;
         }
     }
+}
+
+void preorder_array(NodePtr node, std::vector<int> &v)
+{
+    if(!node) {
+        return;
+    }
+
+    v.push_back(node->num);
+    preorder_array(node->left, v);
+    preorder_array(node->right, v);
+}
+
+NodePtr find_right_leaf_position(int value, NodePtr current)
+{
+    if(!current) {
+        throw std::logic_error("Empty tree");
+    }
+
+    NodePtr successor = current->parent;
+    NodePtr temp = current;
+    while(successor && successor->right && successor->right->num == temp->num) {
+        temp = successor;
+        successor = temp->parent;
+    }
+    if(!successor) {
+        return current;
+    }
+    if(value < successor->num) {
+        return current;
+    }
+    // value > successor->num
+    return find_right_leaf_position(value, successor);
+}
+
+NodePtr tree_from_preorder(std::vector<int> array)
+{
+    if(array.empty()) {
+        return nullptr;
+    }
+
+    int i = 0;
+    NodePtr root = create_node(array[i++]);
+    NodePtr node = root;
+    while(i < array.size()) {
+        if(array[i] == node->num) {
+            i++;
+            continue;
+        }
+        if(array[i] < node->num) {
+            node->left = create_node(array[i++], node);
+            node = node->left;
+            continue;
+        }
+        // array[i] > node->num
+        node = find_right_leaf_position(array[i], node);
+        node->right = create_node(array[i++], node);
+        node = node->right;
+    }
+
+    return root;
+}
+
+int main()
+{
+
+    std::vector<int> tree;
+    for(int i = 0; i < 31; i++)
+        tree.push_back(i);
+
+    NodePtr root = createBST(tree,0,tree.size()-1,nullptr);
+    std::cout << "PREORDER\n";
+    std::vector<int> array;
+    preorder_array(root, array);
+    for(int e : array)
+        std::cout << e << "\t";
+    std::cout << std::endl;
+
+    int i = 0;
+    NodePtr node = tree_from_preorder(array);
+    preorder(node);
+    std::cout << std::endl;
+    inorder(node);
+    std::cout << std::endl;
+    inorder(root);
     return 0;
 }
